@@ -1,39 +1,25 @@
 # audio_engine/audio_engine.py
 
-import pyttsx3
-import time
+import asyncio
+import edge_tts
+import os
 
-def render_audio(ir_nodes, output_file=None):
-    engine = pyttsx3.init()
+VOICE_NARRATOR = "en-US-AriaNeural"
+VOICE_CHARACTER = "en-US-GuyNeural"
 
-    # Optional: list available voices
-    voices = engine.getProperty('voices')
+OUTPUT_DIR = "demo/audio_output"
+os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-    for node in ir_nodes:
-        text = node["text"]
-        emotion = node["emotion"]
-        delivery = node["delivery"]
+async def _speak(text, voice, filename):
+    communicate = edge_tts.Communicate(text=text, voice=voice)
+    await communicate.save(filename)
 
-        # Map emotion to speech properties
-        base_rate = 170
-        rate = int(base_rate * delivery["pace"] + emotion["arousal"] * 30)
-        engine.setProperty('rate', rate)
+def render_audio(ir_nodes):
+    async def generate():
+        for idx, node in enumerate(ir_nodes):
+            voice = VOICE_NARRATOR if node["speaker"] == "narrator" else VOICE_CHARACTER
+            filename = os.path.join(OUTPUT_DIR, f"line_{idx+1}.wav")
+            await _speak(node["text"], voice, filename)
 
-        # Simple volume control using valence
-        volume = 0.7 + (emotion["valence"] * 0.2)
-        engine.setProperty('volume', max(0.3, min(volume, 1.0)))
+    asyncio.run(generate())
 
-        # Speaker-based voice selection (basic)
-        if node["speaker"] != "narrator" and len(voices) > 1:
-            engine.setProperty('voice', voices[1].id)
-        else:
-            engine.setProperty('voice', voices[0].id)
-
-        # Pause before
-        time.sleep(delivery["pause_before"] / 1000)
-
-        engine.say(text)
-        engine.runAndWait()
-
-        # Pause after
-        time.sleep(delivery["pause_after"] / 1000)

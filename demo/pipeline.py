@@ -11,7 +11,6 @@ STORY_PATH = os.path.join(BASE_DIR, "parser", "sample_story.txt")
 def run_pipeline():
     with open(STORY_PATH, "r") as f:
         story_text = f.read()
-
     # 1. Parse story
     parsed_segments = parse_story(story_text)
 
